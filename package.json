@@ -3,7 +3,7 @@
     "cors": "2.8.5",
     "express": "4.17.3"
   },
-  "name": "api-rest-node.js-express",
+  "name": "sell-products-node.js-express",
   "version": "1.0.0",
   "description": "Node.js & Express API REST CRUD",
   "main": "index.js",
