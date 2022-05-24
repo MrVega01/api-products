@@ -1,19 +1,31 @@
 const express = require('express');
+const fs = require('fs');
 const cors = require('cors');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-let products = [
-    {
-        id: 1,
-        name: 'This is a product!!!',
-        dollarPrice: 5,
-        type: "clean",
-        date: '2022-04-08T07:11:30.008Z'
-    },
-];
+// GET JSON
+let products = async ()=>{
+    try {
+        const data = fs.readFileSync('./products.json', 'utf8');
+        return JSON.parse(data);
+    }
+    catch (err) {
+        console.error(err);
+    }
+}
+
+//SET JSON
+let setProducts = (content)=>{
+    fs.writeFile('./products.json', content, err => {
+        if (err) {
+          console.error(err);
+        }
+        // file written successfully
+    });
+}
 //Home
 app.get('/', (req, res)=>{
     res.send(`<h1>API REST with Node.js</h1>
@@ -26,13 +38,15 @@ app.get('/', (req, res)=>{
     );
 });
 //GET ALL
-app.get('/api/products', (req, res)=>{
-    res.json(products);
+app.get('/api/products', async (req, res)=>{
+    res.json( await products());
 });
 //GET SELECTED NOTE
-app.get('/api/products/:id', (req, res)=>{
+app.get('/api/products/:id', async (req, res)=>{
     const id = Number(req.params.id);
-    const product = products.find(note => id === note.id);
+    const nowProducts = await products();
+    console.log(nowProducts)
+    const product = nowProducts.find(note => id === note.id);
     if(product){
         res.json(product);
     }
@@ -41,7 +55,7 @@ app.get('/api/products/:id', (req, res)=>{
     }
 });
 //POST
-app.post('/api/products', (req, res) => {
+app.post('/api/products', async (req, res) => {
     const product = req.body;
     if(!product || !product.name || !product.dollarPrice || typeof(product.dollarPrice) !== "number"){
         res.status(400).json({
@@ -49,7 +63,8 @@ app.post('/api/products', (req, res) => {
         });
     }
     else{
-        const ids = products.map(note => note.id);
+        const nowProducts = await products();
+        const ids = nowProducts.map(note => note.id);
         const maxId = Math.max(...ids);
 
         const newProduct = {
@@ -59,18 +74,21 @@ app.post('/api/products', (req, res) => {
             type: product.type,
             date: new Date().toISOString()
         }
-        products.push(newProduct);
+        nowProducts.push(newProduct);
+        setProducts(JSON.stringify(nowProducts));
         res.status(201).json(newProduct);
     }
 });
 //DELETE
-app.delete('/api/products/:id', (req, res) => {
+app.delete('/api/products/:id', async (req, res) => {
     const id = Number(req.params.id);
-    products = products.filter(note => id !== note.id);
+    let nowProducts = await products();
+    nowProducts = nowProducts.filter(note => id !== note.id);
+    setProducts(JSON.stringify(nowProducts));
     res.status(204).end();
 });
 //PUT
-app.put('/api/products/:id', (req, res) => {
+app.put('/api/products/:id', async (req, res) => {
     const product = req.body;
     if(!product){
         res.status(400).json({
@@ -78,9 +96,10 @@ app.put('/api/products/:id', (req, res) => {
         })
     }
     const id = Number(req.params.id);
-    if(!products.find(n => n.id === id)) res.status(404).json( { error: 'Product not find' } )
+    const nowProducts = await products();
+    if(!nowProducts.find(n => n.id === id)) res.status(404).json( { error: 'Product not find' } )
 
-    products.forEach(n => {
+    nowProducts.forEach(n => {
         if(n.id === id){
             n.name = product.name
             ? product.name
@@ -95,7 +114,8 @@ app.put('/api/products/:id', (req, res) => {
             : n.type;
         }
     });
-    res.status(201).json(products.find(n => n.id === id));
+    setProducts(JSON.stringify(nowProducts));
+    res.status(201).json(nowProducts.find(n => n.id === id));
 });
 //404
 app.use((req, res) => {
